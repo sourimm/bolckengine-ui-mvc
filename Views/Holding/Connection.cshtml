@@ -1,0 +1,159 @@
+﻿@using Newtonsoft.Json;
+@model List<HoldingDetails.Models.tblInstance>
+@{
+    ViewBag.Title = "Connection";
+}
+@{ 
+    if (Session["LoginDtl"] == null)
+    {
+        Response.Redirect("~/Holding/Login");
+    }
+}
+<div style="float:right"><span onclick="DoReg()" class="btn btn-default">Create New Connection </span></div>
+<br />
+<table id="ConnectionTable" class="table table-hover table-responsive thead-light">
+    <thead>
+        <tr>
+            <th>Id </th>
+            <th>Instance Id </th>
+            <th>Instance Name </th>
+            <th>PublicToken</th>
+            <th>Access Token</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var d in Model)
+        {
+            <script>
+                debugger;
+                var cx= "@JsonConvert.SerializeObject(d)";
+            </script>
+            <tr>
+                <td>@d.ConnectionId </td>
+                <td>@d.InstanceId </td>
+                <td><span id="lblName_@d.ConnectionId">@d.InstanceName</span> 
+                    @Html.TextBoxFor(m=> d.InstanceName, "", new { @id = "txtName_"+@d.ConnectionId, @style = "display:none" })</td>
+                <td>@d.PublicToken</td>
+                <td>@d.AccessToken </td>
+                <td><span onclick="DoAction('Edit', @d.ConnectionId);" id="EditBtn_@d.ConnectionId" class="btn btn-default">Edit </span>
+                <span onclick="DoAction('Save', @d.ConnectionId);" style="display:none;" id="SaveBtn_@d.ConnectionId" class="btn btn-default">Save </span>
+                    <span onclick="DoAction('Delete', @d.ConnectionId);" class="btn btn-default">Delete </span>
+                    <span onclick="DoAction('Go', @d.ConnectionId);" class="btn btn-default">Go </span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script type="text/javascript">
+
+    function DoAction(Action,id)
+    {
+        if(Action=="Delete" || Action=="Go")
+        {
+            var obj = {
+                Id: id,
+                Action: Action
+            };
+            $("#txtAction").val(JSON.stringify(obj));
+            $("#frm").submit();
+        }
+        else if(Action=="Edit")
+        {
+            $("#txtName_" + id).show();
+            $("#SaveBtn_" + id).show();
+            $("#lblName_" + id).hide();
+            $("#EditBtn_" + id).hide();
+            
+        }
+        else if(Action=="Save")
+        {
+            $("#txtName_" + id).hide();
+            $("#SaveBtn_" + id).hide();
+            $("#lblName_" + id).show();
+            $("#EditBtn_" + id).show();
+            var obj = {
+                Id: id,
+                InstanceName: $("#txtName_" + id ).val(),
+                Action: Action
+            };
+            $("#txtAction").val(JSON.stringify(obj));
+            $("#frm").submit();
+        }
+    }
+    function DoReg() {
+            debugger;
+            
+                const configs = {
+                    // Pass the link_token generated in step 2.
+                    token: '@ViewBag.LinkToken',
+                    onLoad: function () {
+                        // The Link module finished loading.
+                    },
+                    onSuccess: function (public_token, metadata) {
+                        debugger;
+                        // The onSuccess function is called when the user has
+                        // successfully authenticated and selected an account to
+                        // use.
+                        //
+                        // When called, you will send the public_token
+                        // and the selected account ID, metadata.accounts,
+                        // to your backend app server.
+                        //
+                        var obj = {
+                            InstanceId: metadata.institution.institution_id,
+                            InstanceName: metadata.institution.name,
+                            PublicToken: public_token
+                        };
+
+                        $("#txtPublicToken").val(JSON.stringify(obj));
+                        $("#frm").submit();
+                        switch (metadata.accounts.length) {
+                            case 0:
+                                // Select Account is disabled: https://dashboard.plaid.com/link/account-select
+                                break;
+                            case 1:
+                                console.log('Customer-selected account ID: ' + metadata.accounts[0].id);
+                                break;
+                            default:
+                                // Multiple Accounts is enabled: https://dashboard.plaid.com/link/account-select
+                        }
+                    },
+                    onExit:  function (err, metadata) {
+                        debugger;
+                        // The user exited the Link flow.
+                        if (err != null) {
+                            // The user encountered a Plaid API error
+                            // prior to exiting.
+                        }
+                        // metadata contains information about the institution
+                        // that the user selected and the most recent
+                        // API request IDs.
+                        // Storing this information can be helpful for support.
+                    }
+            };
+
+            var linkHandler = Plaid.create(configs);
+
+            linkHandler.open();
+        
+        }
+    
+    $(function () {
+        debugger;
+        //$("#ConnectionTable").tablesorter({
+        //    theme: 'blue'
+        //});
+    });
+           
+</script>
+
+@using (Html.BeginForm("Connection", "Holding", FormMethod.Post, new { @id = "frm" }))
+{
+    @Html.Hidden("ConnectionDtl", string.Empty, new { @id = "txtPublicToken" })
+    @Html.Hidden("Action", string.Empty, new { @id = "txtAction" })
+
+}

@@ -1,0 +1,64 @@
+@model List<HoldingDetails.Models.Holding>
+@{
+    ViewBag.Title = "Holding";
+}
+
+
+<script src="~/Scripts/jquery.tablesorter.min.js"></script>
+<script src="~/Scripts/jquery.tablesorter.widgets.min.js"></script>
+<link href="~/Content/theme.blue.css" rel="stylesheet" />
+@*<div class="col-md-12" style="text-align:right; height:30px;">
+    @Html.ActionLink("Add Connection", "AddConnection", null, new { @class = "btn btn-default" })
+</div>*@
+@{ 
+    if(TempData.ContainsKey("error"))
+    {
+        <div>@TempData["error"].ToString() </div>
+    }
+}
+<table id="holdingTable" class="tablesorter">
+    <thead>
+        <tr>
+            <th>Account Id </th>
+            <th>Cost Basis </th>
+            <th>Institution Price </th>
+            <th>Institution Price As Of</th>
+            <th>Institution Value </th>
+            <th>Iso Currency Code</th>
+            <th>Quantity</th>
+            <th>Unofficial Currency Code</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var d in Model)
+        {
+            <tr>
+                <td>@d.AccountId </td>
+                <td>@d.CostBasis </td>
+                <td>@d.InstitutionPrice </td>
+                <td>@d.InstitutionPriceAsOf</td>
+                <td>@d.InstitutionValue </td>
+                <td>@d.IsoCurrencyCode</td>
+                <td>@d.Quantity</td>
+                <td>@d.UnofficialCurrencyCode</td>
+
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+
+
+
+<script type="text/javascript">
+    $(function () {
+        debugger;
+        $("#holdingTable").tablesorter({
+            theme: 'blue'
+        });
+    });
+</script>
+
+
+
