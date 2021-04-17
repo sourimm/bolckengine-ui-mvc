@@ -46,7 +46,7 @@ namespace HoldingDetails.BL
                 obj.ClientName = "Plaid App";
                 obj.User = new User {ClientUserId = "test_user" };
                 obj.Products = new string[] { "auth"};
-                obj.CountryCodes = new string[] { "GB","US" };
+                obj.CountryCodes = new string[] { "US" };
                 obj.Language = "en";
 
                 IRestResponse response = RestCall(string.Format("{0}/link/token/create", ApiUrl), obj);
