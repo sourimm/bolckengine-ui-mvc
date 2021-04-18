@@ -1,4 +1,4 @@
-@model List<HoldingDetails.Models.HoldingExt>
+@model List<HoldingDetails.Models.HoldingDisplayExt>
 @{
     ViewBag.Title = "Holding";
 }
@@ -27,42 +27,44 @@
             <th>Connection Id</th>
             <th>Instance Id</th>
             <th>Instance Name</th>
-            <th>Account Id</th>
-            <th>Cost Basis</th>
-            <th>Institution Price</th>
-            <th>Institution Price As Of</th>
-            <th>Institution Value</th>
-            <th>Iso Currency Code</th>
-            <th>Quantity</th>
-            <th>Unofficial Currency Code</th>
+            <th>Symbol</th>
+            <th>Account</th>
+            <th>Cost/Share</th>
+            <th>Qty</th>
+            <th>Asset</th>
+            <th>Price</th>
+            <th>Mkt Value</th>
+            <th>Day Gain($)</th>
+            <th>Day Gain(%)</th>
+            <th>Gain($)</th>
+            <th>Gain(%)</th>
         </tr>
     </thead>
     <tbody>
         @if (Model?.Count > 0)
         {
-            foreach (var d in Model)
+            foreach (var d in Model.OrderBy(o => o.ConnectionId))
             {
                 <tr>
                     <td>@d.ConnectionId</td>
                     <td>@d.InstanceId</td>
                     <td>@d.InstanceName</td>
-                    <td>@d.AccountId</td>
-                    <td>@d.CostBasis</td>
-                    <td>@d.InstitutionPrice</td>
-                    <td>@d.InstitutionPriceAsOf</td>
-                    <td>@d.InstitutionValue </td>
-                    <td>@d.IsoCurrencyCode</td>
-                    <td>@d.Quantity</td>
-                    <td>@d.UnofficialCurrencyCode</td>
+                    <td>@d.Symbol</td>
+                    <td>@d.Account</td>
+                    <td>@d.Cost_Share</td>
+                    <td>@d.Qty</td>
+                    <td>@d.Asset </td>
+                    <td>@d.Price</td>
+                    <td>@d.MktValue</td>
+                    <td>@d.DayGainDollar</td>
+                    <td>@d.DayGainPercentage</td>
+                    <td>@d.GainDollar</td>
+                    <td>@d.GainPercentage</td>
                 </tr>
             }
         }
     </tbody>
 </table>
-
-
-
-
 
 <script type="text/javascript">
     $(function () {

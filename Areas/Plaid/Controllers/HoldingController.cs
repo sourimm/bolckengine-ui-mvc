@@ -87,9 +87,10 @@ namespace HoldingDetails.Controllers
         }
         public ActionResult Connection()
         {
+            tblUser loginDtl = null;
             if (Session["LoginDtl"] != null)
             {
-                tblUser loginDtl = (tblUser)Session["LoginDtl"];
+                loginDtl = (tblUser)Session["LoginDtl"];
             }
 
             if (Session["LinkToken"] != null)
@@ -108,7 +109,7 @@ namespace HoldingDetails.Controllers
             }
             using (PlaidEntities DB = new PlaidEntities())
             {
-                var instanceCollection = DB.tblInstances.Select(instance => new
+                var instanceCollection = DB.tblInstances.Where(item => item.UserId == loginDtl.Id).Select(instance => new
                 {
                     instance.ConnectionId,
                     instance.InstanceId,
@@ -118,7 +119,7 @@ namespace HoldingDetails.Controllers
                 if (instanceCollection?.Count() > 0)
                 {
                     int index = 0;
-                    Task<KeyValuePair<string, List<Holding>>>[] concurrentTasks = new Task<KeyValuePair<string, List<Holding>>>[instanceCollection.Count()];
+                    Task<KeyValuePair<string, List<HoldingDisplay>>>[] concurrentTasks = new Task<KeyValuePair<string, List<HoldingDisplay>>>[instanceCollection.Count()];
                     foreach (var instance in instanceCollection)
                     {
                         concurrentTasks[index] = Task.Run(() => GetHoldingResponse(instance.AccessToken));
@@ -133,46 +134,36 @@ namespace HoldingDetails.Controllers
                         Task.WaitAll(concurrentTasks);
                         if (concurrentTasks != null)
                         {
-                            ConcurrentDictionary<string, List<Holding>> allThreadSafeHoldings = new ConcurrentDictionary<string, List<Holding>>();
+                            ConcurrentDictionary<string, List<HoldingDisplay>> allThreadSafeHoldings = new ConcurrentDictionary<string, List<HoldingDisplay>>();
                             Parallel.ForEach(concurrentTasks, (task) =>
                             {
                                 if (task != null && task.IsCompleted && !task.IsFaulted && !task.IsCanceled 
                                     && task.Status == TaskStatus.RanToCompletion)
                                 {
-                                    KeyValuePair<string, List<Holding>> keyValuePair = task.Result;
+                                    KeyValuePair<string, List<HoldingDisplay>> keyValuePair = task.Result;
                                     allThreadSafeHoldings.TryAdd(keyValuePair.Key, keyValuePair.Value);
                                 }
                             });
 
                             if (allThreadSafeHoldings?.Count > 0)
                             {
-                                List<HoldingExt> allHoldings = (from eachKeyValuePair in allThreadSafeHoldings
-                                                                where eachKeyValuePair.Value?.Count > 0
-                                                                from value in eachKeyValuePair.Value
-                                                                select new HoldingExt
-                                                                {
-                                                                    ConnectionId = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).ConnectionId,
-                                                                    InstanceId = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).InstanceId,
-                                                                    InstanceName = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).InstanceName,
-
-                                                                    AccountId = value.AccountId,
-                                                                    CostBasis = value.CostBasis,
-                                                                    InstitutionPrice = value.InstitutionPrice,
-                                                                    InstitutionPriceAsOf = value.InstitutionPriceAsOf,
-                                                                    InstitutionValue = value.InstitutionValue,
-                                                                    IsoCurrencyCode = value.IsoCurrencyCode,
-                                                                    Quantity = value.Quantity,
-                                                                    SecurityId = value.SecurityId,
-                                                                    UnofficialCurrencyCode = value.UnofficialCurrencyCode
-                                                                })
-                                                                .ToList();  
+                                List<HoldingDisplayExt> allHoldings = (from eachKeyValuePair in allThreadSafeHoldings
+                                                                        where eachKeyValuePair.Value?.Count > 0
+                                                                        from value in eachKeyValuePair.Value
+                                                                        select new HoldingDisplayExt(value)
+                                                                        {
+                                                                            ConnectionId = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).ConnectionId,
+                                                                            InstanceId = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).InstanceId,
+                                                                            InstanceName = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).InstanceName,
+                                                                        })
+                                                                        .ToList();  
 
                                 ViewBag.ClientId = ClientId;
                                 ViewBag.Secret = Secret;
                                 ViewBag.ApiUrl = ApiUrl;
                                 ViewBag.LinkToken = Session["LinkToken"];
                                 ViewBag.InstanceCollection = instanceCollection;
-                                return View("holding", allHoldings.OrderByDescending(o => o.ConnectionId));
+                                return View("holding", allHoldings);
                             }
                             else
                             {
@@ -208,15 +199,19 @@ namespace HoldingDetails.Controllers
             }
         }
 
-        private Task<KeyValuePair<string, List<Holding>>> GetHoldingResponse(string accessToken)
+        private Task<KeyValuePair<string, List<HoldingDisplay>>> GetHoldingResponse(string accessToken)
         {
-            List<HoldingDetails.Models.Holding> holdingList = null;
+            List<HoldingDisplay> holdingDisplayList = null;
             HoldingResponse holdingResponce = helper.GetHoldings(accessToken);
             if (holdingResponce?.holdings?.Count > 0)
             {
-                holdingList = holdingResponce.holdings;
+                holdingDisplayList = new List<HoldingDisplay>();
+                foreach (Holding holding in holdingResponce.holdings)
+                {
+                    holdingDisplayList.Add(new HoldingDisplay(holding, holdingResponce.accounts, holdingResponce.securities));
+                }
             }
-            return Task.FromResult(new KeyValuePair<string, List<Holding>>(accessToken, holdingList));
+            return Task.FromResult(new KeyValuePair<string, List<HoldingDisplay>>(accessToken, holdingDisplayList));
         }
 
 
