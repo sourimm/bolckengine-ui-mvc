@@ -12,7 +12,7 @@ namespace HoldingDetails.Models
         public int Id { get; set; }
         public String Action { get; set; }
     }
-        public class HoldingResponse
+    public class HoldingResponse
     {
         [JsonProperty("request_id")]
         public string RequestId { get; set; }
@@ -24,13 +24,136 @@ namespace HoldingDetails.Models
         public string ErrorMessage { get; set; }
 
         public List<Holding> holdings = new List<Holding>();
+
+        public List<Account> accounts = new List<Account>();
+
+        public List<Security> securities = new List<Security>();
     }
 
-    public class HoldingExt : Holding
+    public sealed class HoldingDisplayExt : HoldingDisplay
     {
         public int ConnectionId { get; set; }
         public string InstanceId { get; set; }
         public string InstanceName { get; set; }
+
+        public HoldingDisplayExt(HoldingDisplay holdingDisplay)
+        {
+            this.Symbol = holdingDisplay.Symbol;
+            this.Account = holdingDisplay.Account;
+            this.Cost_Share = holdingDisplay.Cost_Share;
+            this.Qty = holdingDisplay.Qty;
+            this.Asset = holdingDisplay.Asset;
+            this.Price = holdingDisplay.Price;
+            this.MktValue = holdingDisplay.MktValue;
+            this.DayGainDollar = holdingDisplay.DayGainDollar;
+            this.DayGainPercentage = holdingDisplay.DayGainPercentage;
+            this.GainDollar = holdingDisplay.GainDollar;
+            this.GainPercentage = holdingDisplay.GainPercentage;
+        }
+    }
+
+    public class HoldingDisplay
+    {
+        public HoldingDisplay() { }
+        public HoldingDisplay(Holding holding, List<Account> accounts, List<Security> securities)
+        {
+            if (securities?.Count > 0 && securities.Any(o => o.SecurityId.Equals(holding.SecurityId)))
+            {
+                var securityObject = securities.First(o => o.SecurityId.Equals(holding.SecurityId));
+                Symbol = securityObject.TickerSymbol;
+                Asset = securityObject.Type;
+            }
+            if (accounts?.Count > 0 && accounts.Any(o => o.AccountId.Equals(holding.AccountId)))
+            {
+                var accountObject = accounts.First(o => o.AccountId.Equals(holding.AccountId));
+                Account = accountObject.Name;
+            }
+            Cost_Share = holding.CostBasis;
+            Qty = holding.Quantity;
+            Price = holding.InstitutionPrice;
+            MktValue = holding.InstitutionValue;
+        }
+
+        public string Symbol { get; protected set; }
+        public string Account { get; protected set; }
+        public float? Cost_Share { get; protected set; }
+        public float? Qty { get; protected set; }
+        public string Asset { get; protected set; }
+        public float? Price { get; protected set; }
+        public float? MktValue {get; protected set; }
+        public string DayGainDollar { get; protected set; }
+        public string DayGainPercentage { get; protected set; }
+        public string GainDollar { get; protected set; }
+        public string GainPercentage { get; protected set; }
+    }
+
+    public class Account
+    {
+        [JsonProperty("account_id")]
+        public string AccountId { get; set; }
+
+        [JsonProperty("mask")]
+        public string Mask { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("official_name")]
+        public string OfficialName { get; set; }
+
+        [JsonProperty("subtype")]
+        public string SubType { get; set; }
+
+        [JsonProperty("Type")]
+        public string type { get; set; }
+    }
+
+    public class Security
+    {
+        [JsonProperty("close_price")]
+        public double? ClosePrice { get; set; }
+
+        [JsonProperty("close_price_as_of")]
+        public object ClosePriceAsOf { get; set; }
+
+        [JsonProperty("cusip")]
+        public object Cusip { get; set; }
+
+        [JsonProperty("institution_id")]
+        public object InstitutionId { get; set; }
+
+        [JsonProperty("institution_security_id")]
+        public object InstitutionSecurityId { get; set; }
+
+        [JsonProperty("is_cash_equivalent")]
+        public bool IsCashEquivalent { get; set; }
+
+        [JsonProperty("isin")]
+        public object Isin { get; set; }
+
+        [JsonProperty("iso_currency_code")]
+        public string IsoCurrencyCode { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("proxy_security_id")]
+        public object ProxySecurityId { get; set; }
+
+        [JsonProperty("security_id")]
+        public string SecurityId { get; set; }
+
+        [JsonProperty("sedol")]
+        public object Sedol { get; set; }
+
+        [JsonProperty("ticker_symbol")]
+        public string TickerSymbol { get; set; }
+
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
+        [JsonProperty("unofficial_currency_code")]
+        public object UnofficialCurrencyCode { get; set; }
     }
 
     public class Holding
@@ -158,4 +281,4 @@ namespace HoldingDetails.Models
     }
 
 
-    }
+}

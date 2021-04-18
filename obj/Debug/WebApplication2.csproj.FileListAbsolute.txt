@@ -498,7 +498,6 @@ D:\Plaid\bolckengine-ui-mvc\bin\Microsoft.Owin.Security.Twitter.xml
 D:\Plaid\bolckengine-ui-mvc\bin\Microsoft.Owin.Security.MicrosoftAccount.xml
 D:\Plaid\bolckengine-ui-mvc\bin\Microsoft.Owin.Security.OAuth.xml
 D:\Plaid\bolckengine-ui-mvc\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
-D:\Plaid\bolckengine-ui-mvc\obj\Debug\WebApplication2.csprojAssemblyReference.cache
 D:\Plaid\bolckengine-ui-mvc\obj\Debug\WebApplication2.csproj.CopyComplete
 D:\Plaid\bolckengine-ui-mvc\obj\Debug\WebApplication2.dll
 D:\Plaid\bolckengine-ui-mvc\obj\Debug\WebApplication2.pdb
