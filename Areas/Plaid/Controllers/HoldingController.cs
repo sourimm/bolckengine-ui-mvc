@@ -172,7 +172,8 @@ namespace HoldingDetails.Controllers
                                 ViewBag.ApiUrl = ApiUrl;
                                 ViewBag.LinkToken = Session["LinkToken"];
                                 ViewBag.InstanceCollection = instanceCollection;
-                                return View("holding", allHoldings.OrderByDescending(o => o.ConnectionId));
+                                return View("holding", allHoldings);
+                                //return View("holding", allHoldings.OrderByDescending(o => o.ConnectionId));
                             }
                             else
                             {
