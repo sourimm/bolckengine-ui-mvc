@@ -9,6 +9,8 @@ using System.Net;
 using Newtonsoft.Json;
 using HoldingDetails.BL;
 using System.Linq;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace HoldingDetails.Controllers
 {
@@ -27,7 +29,7 @@ namespace HoldingDetails.Controllers
 
         }
 
-        
+
 
         // GET: Holding
         public ActionResult Holding()
@@ -56,14 +58,14 @@ namespace HoldingDetails.Controllers
 
             //----------------------------
 
-           // ViewBag.publicToken = Session["PublicToken"];
+            // ViewBag.publicToken = Session["PublicToken"];
             ViewBag.ClientId = ClientId;
             ViewBag.Secret = Secret;
             ViewBag.ApiUrl = ApiUrl;
             ViewBag.LinkToken = Session["LinkToken"];
             return View(holdingList);
         }
-        
+
         public ActionResult Login()
         {
             return View();
@@ -106,12 +108,120 @@ namespace HoldingDetails.Controllers
             }
             using (PlaidEntities DB = new PlaidEntities())
             {
-                List<tblInstance> Instances = DB.tblInstances.Select(x => x).ToList<tblInstance>();
-                return View(Instances);
+                var instanceCollection = DB.tblInstances.Select(instance => new
+                {
+                    instance.ConnectionId,
+                    instance.InstanceId,
+                    instance.InstanceName,
+                    AccessToken = instance.AccessToken.Trim()
+                });
+                if (instanceCollection?.Count() > 0)
+                {
+                    int index = 0;
+                    Task<KeyValuePair<string, List<Holding>>>[] concurrentTasks = new Task<KeyValuePair<string, List<Holding>>>[instanceCollection.Count()];
+                    foreach (var instance in instanceCollection)
+                    {
+                        concurrentTasks[index] = Task.Run(() => GetHoldingResponse(instance.AccessToken));
+                        index++;
+                        if (index == instanceCollection.Count())
+                        {
+                            break;
+                        }
+                    }
+                    try
+                    {
+                        Task.WaitAll(concurrentTasks);
+                        if (concurrentTasks != null)
+                        {
+                            ConcurrentDictionary<string, List<Holding>> allThreadSafeHoldings = new ConcurrentDictionary<string, List<Holding>>();
+                            Parallel.ForEach(concurrentTasks, (task) =>
+                            {
+                                if (task != null && task.IsCompleted && !task.IsFaulted && !task.IsCanceled 
+                                    && task.Status == TaskStatus.RanToCompletion)
+                                {
+                                    KeyValuePair<string, List<Holding>> keyValuePair = task.Result;
+                                    allThreadSafeHoldings.TryAdd(keyValuePair.Key, keyValuePair.Value);
+                                }
+                            });
+
+                            if (allThreadSafeHoldings?.Count > 0)
+                            {
+                                List<HoldingExt> allHoldings = (from eachKeyValuePair in allThreadSafeHoldings
+                                                                where eachKeyValuePair.Value?.Count > 0
+                                                                from value in eachKeyValuePair.Value
+                                                                select new HoldingExt
+                                                                {
+                                                                    ConnectionId = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).ConnectionId,
+                                                                    InstanceId = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).InstanceId,
+                                                                    InstanceName = instanceCollection.First(o => o.AccessToken.Equals(eachKeyValuePair.Key)).InstanceName,
+
+                                                                    AccountId = value.AccountId,
+                                                                    CostBasis = value.CostBasis,
+                                                                    InstitutionPrice = value.InstitutionPrice,
+                                                                    InstitutionPriceAsOf = value.InstitutionPriceAsOf,
+                                                                    InstitutionValue = value.InstitutionValue,
+                                                                    IsoCurrencyCode = value.IsoCurrencyCode,
+                                                                    Quantity = value.Quantity,
+                                                                    SecurityId = value.SecurityId,
+                                                                    UnofficialCurrencyCode = value.UnofficialCurrencyCode
+                                                                })
+                                                                .ToList();  
+
+                                ViewBag.ClientId = ClientId;
+                                ViewBag.Secret = Secret;
+                                ViewBag.ApiUrl = ApiUrl;
+                                ViewBag.LinkToken = Session["LinkToken"];
+                                ViewBag.InstanceCollection = instanceCollection;
+                                return View("holding", allHoldings.OrderByDescending(o => o.ConnectionId));
+                            }
+                            else
+                            {
+                                TempData["error"] = "Error occurred to process all holding data simultaneously.";
+                                return View("holding", null);
+                            }
+                        }
+                        else
+                        {
+                            TempData["error"] = "Error occurred to get all holding data simultaneously.";
+                            return View("holding", null);
+                        }
+                    }
+                    catch (System.AggregateException agEx)
+                    {
+                        if (agEx.InnerExceptions?.Count > 0)
+                        {
+                            TempData["error"] = agEx.Flatten().Message;
+                        }
+                        return View("holding", null);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        TempData["error"] = ex.Message;
+                        return View("holding", null);
+                    }
+                }
+                else
+                {
+                    TempData["error"] = "No instance(s) found in DB.";
+                    return View("holding", null);
+                }
             }
         }
+
+        private Task<KeyValuePair<string, List<Holding>>> GetHoldingResponse(string accessToken)
+        {
+            List<HoldingDetails.Models.Holding> holdingList = null;
+            HoldingResponse holdingResponce = helper.GetHoldings(accessToken);
+            if (holdingResponce?.holdings?.Count > 0)
+            {
+                holdingList = holdingResponce.holdings;
+            }
+            return Task.FromResult(new KeyValuePair<string, List<Holding>>(accessToken, holdingList));
+        }
+
+
         [HttpPost]
-        public ActionResult Connection(string ConnectionDtl,string Action)
+        public ActionResult Connection(string ConnectionDtl, string Action)
         {
             if (Session["LinkToken"] != null)
             {
@@ -143,7 +253,7 @@ namespace HoldingDetails.Controllers
                         return View(Instances);
                     }
                 }
-                else if(obj.Action.Equals("Save"))
+                else if (obj.Action.Equals("Save"))
                 {
                     using (PlaidEntities DB = new PlaidEntities())
                     {
@@ -153,13 +263,14 @@ namespace HoldingDetails.Controllers
                             result.InstanceName = obj.InstanceName;
                             DB.SaveChanges();
                         }
-                        List<tblInstance> Instances = DB.tblInstances.Select(x => x).ToList<tblInstance>();
-                        return View(Instances);
+                        //List<tblInstance> Instances = DB.tblInstances.Select(x => x).ToList<tblInstance>();
+                        //return View(Instances);
+                        RedirectToAction("Connection");
                     }
                 }
                 else if (obj.Action.Equals("Cancel"))
                 {
-                        return View();
+                    return View();
                 }
                 else
                     return View();
@@ -182,12 +293,13 @@ namespace HoldingDetails.Controllers
                     }
                 }
             }
-           
-            using (PlaidEntities DB = new PlaidEntities())
-            {
-                List<tblInstance> Instances = DB.tblInstances.Select(x => x).ToList<tblInstance>();
-                return View(Instances);
-            }
+
+            return RedirectToAction("Connection");
+            //using (PlaidEntities DB = new PlaidEntities())
+            //{
+            //    List<tblInstance> Instances = DB.tblInstances.Select(x => x).ToList<tblInstance>();
+            //    return View(Instances);
+            //}
         }
     }
 }

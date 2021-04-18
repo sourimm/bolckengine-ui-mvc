@@ -26,6 +26,13 @@ namespace HoldingDetails.Models
         public List<Holding> holdings = new List<Holding>();
     }
 
+    public class HoldingExt : Holding
+    {
+        public int ConnectionId { get; set; }
+        public string InstanceId { get; set; }
+        public string InstanceName { get; set; }
+    }
+
     public class Holding
     {
         [JsonProperty("account_id")]
