@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Web;
 using System.Web.UI;
+using HoldingDetails.BL;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
+using Newtonsoft.Json;
 using Owin;
+using RestSharp;
 using WebApplication2.Models;
 
 namespace WebApplication2.Account
@@ -38,7 +41,21 @@ namespace WebApplication2.Account
                 switch (result)
                 {
                     case SignInStatus.Success:
-                        IdentityHelper.RedirectToReturnUrl(Request.QueryString["ReturnUrl"], Response);
+
+                        String LocalAPI = String.Format("{0}://{1}{2}", Request.Url.Scheme, Request.Headers["host"].ToString(), "/api/LocalAPI/GetLoginDtlPlaidDB");
+
+                        RestHelper helper = new RestHelper("", "", "");
+                        HoldingDetails.Models.tblUser obj = new HoldingDetails.Models.tblUser();
+                        obj.LoginId = Email.Text;
+                        obj.Password = Password.Text;
+                        IRestResponse response = helper.RestCall(LocalAPI, obj);
+                        if (response.StatusCode.ToString() == "OK")
+                        {
+                            HoldingDetails.Models.tblUser loginDtl = JsonConvert.DeserializeObject<HoldingDetails.Models.tblUser>(response.Content);
+                            Session["LoginDtl"] = loginDtl;
+                            IdentityHelper.RedirectToReturnUrl(Request.QueryString["ReturnUrl"], Response);
+                        }
+
                         break;
                     case SignInStatus.LockedOut:
                         Response.Redirect("/Account/Lockout");

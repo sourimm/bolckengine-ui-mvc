@@ -412,6 +412,7 @@
     <Compile Include="App_Start\IdentityConfig.cs" />
     <Compile Include="App_Start\Startup.Auth.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Areas\Plaid\Controllers\LocalAPIController.cs" />
     <Compile Include="Areas\Plaid\PlaidAreaRegistration.cs" />
     <Compile Include="BlockEngineController.cs" />
     <Compile Include="BL\RestHelper.cs" />
@@ -515,6 +516,7 @@
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="Areas\Plaid\Data\" />
+    <Folder Include="Areas\Plaid\Views\API\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -68,7 +68,10 @@ namespace HoldingDetails.Controllers
 
         public ActionResult Login()
         {
-            return View();
+            if (Session["LoginDtl"] != null)
+                return RedirectToAction("Connection");
+            else
+                return Redirect("~/Account/Login.aspx?ReturnUrl=Plaid");
         }
         [HttpPost]
         public ActionResult Login(tblUser loginDtl)
@@ -115,6 +118,12 @@ namespace HoldingDetails.Controllers
                     instance.InstanceId,
                     instance.InstanceName,
                     AccessToken = instance.AccessToken.Trim()
+                }).AsEnumerable().Select(x => new
+                {
+                    ConnectionId = x.ConnectionId,
+                    InstanceId = x.InstanceId,
+                    InstanceName = x.InstanceName,
+                    AccessToken = Base64Decode(x.AccessToken.ToString())
                 });
                 if (instanceCollection?.Count() > 0)
                 {
@@ -232,7 +241,7 @@ namespace HoldingDetails.Controllers
                     using (PlaidEntities DB = new PlaidEntities())
                     {
                         string AccessToken = DB.tblInstances.Where(x => x.ConnectionId == obj.Id).Select(x => x.AccessToken).FirstOrDefault().ToString();
-                        Session["AccessToken"] = AccessToken.Trim();
+                        Session["AccessToken"] =Base64Decode(AccessToken.Trim());
                         return RedirectToAction("Holding");
                     }
                 }
@@ -282,7 +291,8 @@ namespace HoldingDetails.Controllers
                 {
                     tblUser loginDtl = (tblUser)Session["LoginDtl"];
                     obj.UserId = loginDtl.Id;
-                    obj.AccessToken = publicTokenEx.AccessToken;
+                    obj.AccessToken = Base64Encode(publicTokenEx.AccessToken.Trim());
+                    obj.PublicToken = Base64Encode(obj.PublicToken.Trim());
                     using (PlaidEntities DB = new PlaidEntities())
                     {
                         DB.tblInstances.Add(obj);
@@ -297,6 +307,17 @@ namespace HoldingDetails.Controllers
             //    List<tblInstance> Instances = DB.tblInstances.Select(x => x).ToList<tblInstance>();
             //    return View(Instances);
             //}
+        }
+        public string Base64Encode(string plainText)
+        {
+            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+            return System.Convert.ToBase64String(plainTextBytes);
+        }
+
+        public string Base64Decode(string base64EncodedData)
+        {
+            var base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
+            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
     }
 }
